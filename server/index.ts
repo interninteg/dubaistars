@@ -24,9 +24,9 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      secure: false,
       httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Allow cross-origin cookies in production
+      sameSite: "lax", // Allow cross-origin cookies in production
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   })
