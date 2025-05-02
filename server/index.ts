@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import session from "express-session";
-import { db } from "./db";
+import { pool } from "./db";
 
 // Initialize session store with the PostgreSQL database
 import connectPgSimple from "connect-pg-simple";
@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(
   session({
     store: new PgSession({
-      pool: db.$client,
+      pool, // use the correct pg.Pool instance
       tableName: "session", // Name of the session table
       createTableIfMissing: true,
     }),
