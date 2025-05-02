@@ -1,0 +1,8 @@
+{
+    "app": "dubaistars",
+    "port": 5000,
+    "build": {
+      "location": "iran"
+    },
+    "disks": []
+  }
