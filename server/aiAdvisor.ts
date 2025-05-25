@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ChatOpenAI } from "@langchain/openai";
-import { createGraph, Node, GraphInputs } from "@langchain/langgraph";
+import { RunnableGraph, RunnableNode, RunnableGraphInputs } from "@langchain/langgraph";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,15 +43,15 @@ const llm = new ChatOpenAI({
   maxTokens: 1500,
 });
 
-// Define a single node for the assistant
-const assistantNode: Node = async (inputs: GraphInputs) => {
+// Define a node for the assistant
+const assistantNode: RunnableNode = async (inputs: RunnableGraphInputs) => {
   const { messages } = inputs;
   const response = await llm.invoke(messages);
   return { messages: [...messages, response] };
 };
 
 // Create the graph
-const graph = createGraph({
+const graph = new RunnableGraph({
   nodes: {
     assistant: assistantNode,
   },
