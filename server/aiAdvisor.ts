@@ -1,9 +1,7 @@
-import OpenAI from "openai";
 import { storage } from "./storage";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { ChatOpenAI } from "langchain-openai";
 import { createGraph, Node, GraphInputs } from "langgraph";
 
