@@ -2,8 +2,8 @@ import { storage } from "./storage";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { ChatOpenAI } from "langchain-openai";
-import { createGraph, Node, GraphInputs } from "langgraph";
+import { ChatOpenAI } from "@langchain/openai";
+import { createGraph, Node, GraphInputs } from "@langchain/langgraph";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
