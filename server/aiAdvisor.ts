@@ -4,16 +4,14 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { ChatOpenAI } from "langchain-openai";
+import { createGraph, Node, GraphInputs } from "langgraph";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const OPENAI_MODEL = "gpt-4o";
-
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY 
-});
 
 // Read system message from file
 let systemMessage = "";
@@ -39,77 +37,77 @@ try {
   `;
 }
 
+// Set up LangGraph LLM
+const llm = new ChatOpenAI({
+  openAIApiKey: process.env.OPENAI_API_KEY,
+  modelName: OPENAI_MODEL,
+  temperature: 0.3,
+  maxTokens: 1500,
+});
+
+// Define a single node for the assistant
+const assistantNode: Node = async (inputs: GraphInputs) => {
+  const { messages } = inputs;
+  const response = await llm.invoke(messages);
+  return { messages: [...messages, response] };
+};
+
+// Create the graph
+const graph = createGraph({
+  nodes: {
+    assistant: assistantNode,
+  },
+  edges: [
+    { from: "start", to: "assistant" },
+  ],
+  start: "assistant",
+});
+
 export async function generateAIResponse(userId: string, userMessage: string): Promise<string> {
   try {
     // Get conversation history
     const chatHistory = await storage.getChatMessages(userId);
-    
-    // Format messages for OpenAI
-    const systemMsg: ChatCompletionMessageParam = { role: "system", content: systemMessage };
-    
-    // Map each message to the correct type and handle invalid roles
-    const historyMessages: ChatCompletionMessageParam[] = chatHistory.map(msg => {
-      // Only include valid roles for OpenAI API
-      if (msg.role === "user") {
-        return { role: "user", content: msg.content };
-      } else if (msg.role === "assistant") {
-        return { role: "assistant", content: msg.content };
-      } else if (msg.role === "system") {
-        return { role: "system", content: msg.content };
-      } else {
-        // Default to assistant for any invalid roles
-        return { role: "assistant", content: msg.content };
+
+    // Format messages for LangGraph
+    const systemMsg = { role: "system", content: systemMessage };
+    const historyMessages = chatHistory.map(msg => {
+      if (msg.role === "user" || msg.role === "assistant" || msg.role === "system") {
+        return { role: msg.role, content: msg.content };
       }
+      return { role: "assistant", content: msg.content };
     });
-    
-    const userMsg: ChatCompletionMessageParam = { role: "user", content: userMessage };
-    
-    const messages: ChatCompletionMessageParam[] = [
-      systemMsg,
-      ...historyMessages,
-      userMsg
-    ];
-    
-    // Call OpenAI API
-    const response = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
-      messages: messages,
-      temperature: 0.7,
-      max_tokens: 1500,
-    });
-    
-    const aiResponse = response.choices[0].message.content || 
+    const userMsg = { role: "user", content: userMessage };
+    const messages = [systemMsg, ...historyMessages, userMsg];
+
+    // Run the graph
+    const result = await graph.invoke({ messages });
+    const aiResponse = result.messages[result.messages.length - 1]?.content ||
       "I apologize, but I couldn't generate a response. Please try again.";
-    
+
     // Save user message
     await storage.createChatMessage({
       userId,
       content: userMessage,
       role: "user"
     });
-    
+
     // Save AI response
     await storage.createChatMessage({
       userId,
       content: aiResponse,
       role: "assistant"
     });
-    
+
     return aiResponse;
   } catch (error: any) {
     console.error("Error generating AI response:", error);
-    
-    // Check for API key issues
+
     if (error.code === 'auth_error' || error.message?.includes('API key')) {
       return "There seems to be an issue with the AI service authentication. Please check the API key configuration.";
     }
-    
-    // Check for rate limit issues
     if (error.code === 'rate_limit_exceeded') {
       return "The AI service is currently experiencing high demand. Please try again in a few moments.";
     }
-    
-    // Return a generic error message
     return "I'm sorry, I encountered an error while processing your request. Please try again later.";
   }
 }
