@@ -4,8 +4,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { ChatOpenAI } from "@langchain/openai";
 import {
-  createReactAgent,
-} from "@langchain/langgraph/prebuilt";
+  StateGraph,
+  MessagesAnnotation,
+  END,
+  START
+} from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { tool } from '@langchain/core/tools';
 import { z } from "zod";
@@ -39,14 +42,6 @@ try {
   `;
 }
 
-// --- Set up LLM as before ---
-const agentLLM = new ChatOpenAI({
-  openAIApiKey: process.env.OPENAI_API_KEY,
-  modelName: OPENAI_MODEL,
-  temperature: 0.3,
-  maxTokens: 1500,
-});
-
 // Define the schema for booking creation
 const createBookingSchema = z.object({
   destination: z.string().describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
@@ -76,12 +71,38 @@ const createBookingTool = tool(async (input) => {
 
 // Add to your tools array and ToolNode
 const tools = [createBookingTool];
-const toolNode = new ToolNode(tools);
+const toolNodeForGraph = new ToolNode(tools);
 
-const agent = createReactAgent({
-  llm: agentLLM,
-  tools: tools,
-});
+const modelWithTools = new ChatOpenAI({
+  openAIApiKey: process.env.OPENAI_API_KEY,
+  modelName: OPENAI_MODEL,
+  temperature: 0.3,
+  maxTokens: 1500,
+}).bindTools(tools);;
+
+const shouldContinue = (state: typeof MessagesAnnotation.State) => {
+  const { messages } = state;
+  const lastMessage = messages[messages.length - 1];
+  if ("tool_calls" in lastMessage && Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls.length) {
+    return "tools";
+  }
+  return END;
+};
+
+const callModel = async (state: typeof MessagesAnnotation.State) => {
+  const { messages } = state;
+  const response = await modelWithTools.invoke(messages);
+  return { messages: response };
+};
+
+const workflow = new StateGraph(MessagesAnnotation)
+  .addNode("agent", callModel)
+  .addNode("tools", toolNodeForGraph)
+  .addEdge(START, "agent")
+  .addConditionalEdges("agent", shouldContinue, ["tools", END])
+  .addEdge("tools", "agent");
+
+const app = workflow.compile();
 
 // --- Your generateAIResponse function remains the same ---
 export async function generateAIResponse(userId: string, userMessage: string): Promise<string> {
@@ -99,7 +120,7 @@ export async function generateAIResponse(userId: string, userMessage: string): P
     const messages = [systemMsg, ...historyMessages, userMsg];
 
     // Run the graph
-    const result = await agent.invoke({ messages });
+    const result = await app.invoke({ messages });
     const aiResponse = result.messages[result.messages.length - 1]?.content ||
       "I apologize, but I couldn't generate a response. Please try again.";
 
