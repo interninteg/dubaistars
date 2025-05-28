@@ -3,12 +3,16 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ChatOpenAI } from "@langchain/openai";
-import { RunnableGraph, RunnableNode, RunnableGraphInputs } from "@langchain/langgraph";
+import {
+  createReactAgent,
+} from "@langchain/langgraph/prebuilt";
+import { ToolNode } from "@langchain/langgraph/prebuilt";
+import { tool } from '@langchain/core/tools';
+import { z } from "zod";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const OPENAI_MODEL = "gpt-4o";
 
 // Read system message from file
@@ -35,38 +39,55 @@ try {
   `;
 }
 
-// Set up LangGraph LLM
-const llm = new ChatOpenAI({
+// --- Set up LLM as before ---
+const agentLLM = new ChatOpenAI({
   openAIApiKey: process.env.OPENAI_API_KEY,
   modelName: OPENAI_MODEL,
   temperature: 0.3,
   maxTokens: 1500,
 });
 
-// Define a node for the assistant
-const assistantNode: RunnableNode = async (inputs: RunnableGraphInputs) => {
-  const { messages } = inputs;
-  const response = await llm.invoke(messages);
-  return { messages: [...messages, response] };
-};
-
-// Create the graph
-const graph = new RunnableGraph({
-  nodes: {
-    assistant: assistantNode,
-  },
-  edges: [
-    { from: "start", to: "assistant" },
-  ],
-  start: "assistant",
+// Define the schema for booking creation
+const createBookingSchema = z.object({
+  destination: z.string().describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
+  departureDate: z.string().describe("Departure date in ISO format (YYYY-MM-DD)"),
+  returnDate: z.string().optional().describe("Return date in ISO format (YYYY-MM-DD)"),
+  travelClass: z.string().describe("Travel class (e.g., Luxury, Economy, VIP)"),
+  numberOfTravelers: z.number().optional().describe("Number of travelers"),
+  price: z.number().describe("Total price for the booking"),
+  userId: z.string().describe("User ID for whom the booking is created"),
 });
 
+// Tool for creating a booking
+const createBookingTool = tool(async (input) => {
+  // Convert string dates to Date objects
+  const bookingInput = {
+    ...input,
+    departureDate: new Date(input.departureDate),
+    returnDate: input.returnDate ? new Date(input.returnDate) : null,
+  };
+  const booking = await storage.createBooking(bookingInput);
+  return `Booking created! ID: ${booking.id}, Destination: ${booking.destination}, Departure: ${booking.departureDate.toISOString().split('T')[0]}`;
+}, {
+  name: "create_booking",
+  description: "Create a new travel booking for a user.",
+  schema: createBookingSchema,
+});
+
+// Add to your tools array and ToolNode
+const tools = [createBookingTool];
+const toolNode = new ToolNode(tools);
+
+const agent = createReactAgent({
+  llm: agentLLM,
+  tools: tools,
+});
+
+// --- Your generateAIResponse function remains the same ---
 export async function generateAIResponse(userId: string, userMessage: string): Promise<string> {
   try {
-    // Get conversation history
     const chatHistory = await storage.getChatMessages(userId);
 
-    // Format messages for LangGraph
     const systemMsg = { role: "system", content: systemMessage };
     const historyMessages = chatHistory.map(msg => {
       if (msg.role === "user" || msg.role === "assistant" || msg.role === "system") {
@@ -78,25 +99,23 @@ export async function generateAIResponse(userId: string, userMessage: string): P
     const messages = [systemMsg, ...historyMessages, userMsg];
 
     // Run the graph
-    const result = await graph.invoke({ messages });
+    const result = await agent.invoke({ messages });
     const aiResponse = result.messages[result.messages.length - 1]?.content ||
       "I apologize, but I couldn't generate a response. Please try again.";
 
-    // Save user message
     await storage.createChatMessage({
       userId,
       content: userMessage,
       role: "user"
     });
 
-    // Save AI response
     await storage.createChatMessage({
       userId,
-      content: aiResponse,
+      content: aiResponse.toString(),
       role: "assistant"
     });
 
-    return aiResponse;
+    return aiResponse.toString();
   } catch (error: any) {
     console.error("Error generating AI response:", error);
 
