@@ -16,7 +16,7 @@ import { z } from "zod";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const OPENAI_MODEL = "gpt-4o";
+const OPENAI_MODEL = "gpt-3.5-turbo-0613";
 
 // Read system message from file
 let systemMessage = "";
@@ -47,26 +47,70 @@ const createBookingSchema = z.object({
   destination: z.string().describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
   departureDate: z.string().describe("Departure date in ISO format (YYYY-MM-DD)"),
   returnDate: z.string().optional().describe("Return date in ISO format (YYYY-MM-DD)"),
-  travelClass: z.string().describe("Travel class (e.g., Luxury, Economy, VIP)"),
-  numberOfTravelers: z.number().optional().describe("Number of travelers"),
+  travelClass: z.enum(["economy", "luxury", "vip"]).describe("Travel class (e.g., Luxury, Economy, VIP)"),
+  numberOfTravelers:  z.coerce.number().min(1, "At least 1 traveler is required").max(10, "Maximum 10 travelers allowed").describe("Number of travelers"),
   price: z.number().describe("Total price for the booking"),
-  userId: z.string().describe("User ID for whom the booking is created"),
 });
 
 // Tool for creating a booking
 const createBookingTool = tool(async (input) => {
-  // Convert string dates to Date objects
-  const bookingInput = {
-    ...input,
-    departureDate: new Date(input.departureDate),
-    returnDate: input.returnDate ? new Date(input.returnDate) : null,
+  const { userId, ...bookingDetails } = input;
+
+  // Calculate price based on destination and travel class
+  const basePrices: Record<string, number> = {
+    mercury: 200000,
+    venus: 250000,
+    earth: 100000,
+    mars: 300000,
+    saturn: 600000,
   };
-  const booking = await storage.createBooking(bookingInput);
-  return `Booking created! ID: ${booking.id}, Destination: ${booking.destination}, Departure: ${booking.departureDate.toISOString().split('T')[0]}`;
+
+  const multipliers: Record<string, number> = {
+    economy: 1,
+    luxury: 1.5,
+    vip: 2.5,
+  };
+
+  const basePrice = basePrices[bookingDetails.destination.toLowerCase()] || 200000;
+  const multiplier = multipliers[bookingDetails.travelClass.toLowerCase()] || 1;
+  const price = basePrice * multiplier * Number(bookingDetails.numberOfTravelers);
+
+  // Format dates to ISO strings
+  const departureDate = new Date(bookingDetails.departureDate).toISOString();
+  const returnDate = bookingDetails.returnDate ? new Date(bookingDetails.returnDate).toISOString() : null;
+
+  // Build payload with userId
+  const payload = {
+    ...bookingDetails,
+    userId, // Include userId in the payload
+    price,
+    departureDate,
+    returnDate,
+  };
+
+  // Determine the API URL (update the port if needed)
+  const apiUrl = process.env.API_URL || "https://dubaistars.liara.run";
+  const response = await fetch(`${apiUrl}/api/bookings`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error creating booking: ${errorText}`);
+  }
+  const booking = await response.json();
+  const formattedDate = departureDate.split("T")[0];
+  return `Booking created! ID: ${booking.id}, Destination: ${booking.destination}, Departure: ${formattedDate}`;
 }, {
   name: "create_booking",
   description: "Create a new travel booking for a user.",
-  schema: createBookingSchema,
+  schema: createBookingSchema.extend({
+    userId: z.string().describe("User ID of the person making the booking"),
+  }),
 });
 
 // Add to your tools array and ToolNode
@@ -76,7 +120,7 @@ const toolNodeForGraph = new ToolNode(tools);
 const modelWithTools = new ChatOpenAI({
   openAIApiKey: process.env.OPENAI_API_KEY,
   modelName: OPENAI_MODEL,
-  temperature: 0.3,
+  temperature: 0,
   maxTokens: 1500,
 }).bindTools(tools);;
 

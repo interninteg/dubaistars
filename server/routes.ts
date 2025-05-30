@@ -179,17 +179,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new booking
   app.post("/api/bookings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // Set the userId from the session
-      if (!req.session.username) {
+      // Use userId from the request body if provided, otherwise fallback to session
+      const userId = req.body.userId || req.session.username;
+
+      if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
-      // Create booking data with the userId from session
+
+      // Create booking data with the userId
       const bookingData = {
         ...req.body,
-        userId: req.session.username
+        userId, // Ensure userId is included
       };
-      
+
       const validatedData = insertBookingSchema.parse(bookingData);
       const booking = await storage.createBooking(validatedData);
       res.status(201).json(booking);
