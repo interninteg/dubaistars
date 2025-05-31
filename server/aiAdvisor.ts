@@ -42,13 +42,13 @@ try {
   `;
 }
 
-// Define the schema for booking creation
+// Update the schema for booking creation
 const createBookingSchema = z.object({
-  destination:  z.enum(["mercury", "venus", "earth", "mars", "saturn"]).describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
+  destination: z.enum(["mercury", "venus", "earth", "mars", "saturn"]).describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
   departureDate: z.date().describe("Departure date in ISO format (YYYY-MM-DD)"),
-  returnDate: z.date().optional().describe("Return date in ISO format (YYYY-MM-DD)"),
+  returnDate: z.date().nullable().describe("Return date in ISO format (YYYY-MM-DD) or null if not applicable"), // Allow null
   travelClass: z.enum(["economy", "luxury", "vip"]).describe("Travel class (e.g., Luxury, Economy, VIP)"),
-  numberOfTravelers:  z.coerce.number().min(1, "At least 1 traveler is required").max(10, "Maximum 10 travelers allowed").describe("Number of travelers"),
+  numberOfTravelers: z.coerce.number().min(1, "At least 1 traveler is required").max(10, "Maximum 10 travelers allowed").describe("Number of travelers"),
   price: z.number().describe("Total price for the booking"),
 });
 
@@ -76,20 +76,15 @@ const createBookingTool = tool(async (input) => {
   const price = basePrice * multiplier * Number(bookingDetails.numberOfTravelers);
 
   // Build payload with userId
-  const payload = {
+  const payload = createBookingSchema.extend({
+    userId: z.string().describe("User ID of the person making the booking"),
+  }).parse({
     ...bookingDetails,
     userId, // Include userId in the payload
     price,
     returnDate: bookingDetails.returnDate ? new Date(bookingDetails.returnDate) : null, // Convert to Date or null
-  };
-
-  // Validate the payload using the schema
-  const validatedData = createBookingSchema.extend({
-    userId: z.string().describe("User ID of the person making the booking"),
-  }).parse({
-    ...payload,
-    returnDate: payload.returnDate ? payload.returnDate.toISOString() : null, // Use ISO string or null for validation
   });
+
 
   // Use storage.createBooking() directly
   const booking = await storage.createBooking(payload);
