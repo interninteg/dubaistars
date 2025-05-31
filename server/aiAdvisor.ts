@@ -44,7 +44,7 @@ try {
 
 // Define the schema for booking creation
 const createBookingSchema = z.object({
-  destination: z.string().describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
+  destination:  z.enum(["mercury", "venus", "earth", "mars", "saturn"]).describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
   departureDate: z.string().describe("Departure date in ISO format (YYYY-MM-DD)"),
   returnDate: z.string().optional().describe("Return date in ISO format (YYYY-MM-DD)"),
   travelClass: z.enum(["economy", "luxury", "vip"]).describe("Travel class (e.g., Luxury, Economy, VIP)"),
