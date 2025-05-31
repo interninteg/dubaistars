@@ -138,7 +138,7 @@ const app = workflow.compile();
 export async function generateAIResponse(userId: string, userMessage: string): Promise<string> {
   try {
     const chatHistory = await storage.getChatMessages(userId);
-
+    const userIdMsg = { role: "system", content: `User ID: ${userId}` };
     const systemMsg = { role: "system", content: systemMessage };
     const historyMessages = chatHistory.map(msg => {
       if (msg.role === "user" || msg.role === "assistant" || msg.role === "system") {
@@ -150,7 +150,7 @@ export async function generateAIResponse(userId: string, userMessage: string): P
     const messages = [systemMsg, ...historyMessages, userMsg];
 
     // Run the graph
-    const result = await app.invoke({ messages });
+    const result = await app.invoke({ messages});
     const aiResponse = result.messages[result.messages.length - 1]?.content ||
       "I apologize, but I couldn't generate a response. Please try again.";
 
