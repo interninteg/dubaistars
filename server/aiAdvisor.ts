@@ -45,8 +45,8 @@ try {
 // Define the schema for booking creation
 const createBookingSchema = z.object({
   destination:  z.enum(["mercury", "venus", "earth", "mars", "saturn"]).describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
-  departureDate: z.string().describe("Departure date in ISO format (YYYY-MM-DD)"),
-  returnDate: z.string().optional().describe("Return date in ISO format (YYYY-MM-DD)"),
+  departureDate: z.date().describe("Departure date in ISO format (YYYY-MM-DD)"),
+  returnDate: z.date().optional().describe("Return date in ISO format (YYYY-MM-DD)"),
   travelClass: z.enum(["economy", "luxury", "vip"]).describe("Travel class (e.g., Luxury, Economy, VIP)"),
   numberOfTravelers:  z.coerce.number().min(1, "At least 1 traveler is required").max(10, "Maximum 10 travelers allowed").describe("Number of travelers"),
   price: z.number().describe("Total price for the booking"),
@@ -75,35 +75,26 @@ const createBookingTool = tool(async (input) => {
   const multiplier = multipliers[bookingDetails.travelClass.toLowerCase()] || 1;
   const price = basePrice * multiplier * Number(bookingDetails.numberOfTravelers);
 
-  // Format dates to ISO strings
-  const departureDate = new Date(bookingDetails.departureDate).toISOString();
-  const returnDate = bookingDetails.returnDate ? new Date(bookingDetails.returnDate).toISOString() : null;
-
   // Build payload with userId
   const payload = {
     ...bookingDetails,
     userId, // Include userId in the payload
     price,
-    departureDate,
-    returnDate,
+    returnDate: bookingDetails.returnDate ? new Date(bookingDetails.returnDate) : null, // Convert to Date or null
   };
 
-  // Determine the API URL (update the port if needed)
-  const apiUrl = process.env.API_URL || "https://dubaistars.liara.run";
-  const response = await fetch(`${apiUrl}/api/bookings`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload),
+  // Validate the payload using the schema
+  const validatedData = createBookingSchema.extend({
+    userId: z.string().describe("User ID of the person making the booking"),
+  }).parse({
+    ...payload,
+    returnDate: payload.returnDate ? payload.returnDate.toISOString() : null, // Use ISO string or null for validation
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Error creating booking: ${errorText}`);
-  }
-  const booking = await response.json();
-  const formattedDate = departureDate.split("T")[0];
+  // Use storage.createBooking() directly
+  const booking = await storage.createBooking(payload);
+
+  const formattedDate = payload.departureDate.toISOString().split("T")[0];
   return `Booking created! ID: ${booking.id}, Destination: ${booking.destination}, Departure: ${formattedDate}`;
 }, {
   name: "create_booking",
