@@ -16,7 +16,7 @@ import { z } from "zod";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const OPENAI_MODEL = "gpt-3.5-turbo-0613";
+const OPENAI_MODEL = "gpt-4o-mini-2024-07-18";
 
 // Read system message from file
 let systemMessage = "";
