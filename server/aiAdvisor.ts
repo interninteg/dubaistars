@@ -28,7 +28,6 @@ try {
   **Role:** Interplanetary travel advisor
   **Destinations:** Mercury, Venus, Earth, Mars, Saturn Rings Tour
   **Travel Options:** Luxury Cabins, Economy Shuttles, VIP Zero-Gravity
-  **Packages:** Basic, Premium, Ultimate
   
   **Instructions:**
   1. Provide highlights and essential details about each destination (unique attractions, climate conditions, etc.).
