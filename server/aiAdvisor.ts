@@ -147,7 +147,7 @@ export async function generateAIResponse(userId: string, userMessage: string): P
       return { role: "assistant", content: msg.content };
     });
     const userMsg = { role: "user", content: userMessage };
-    const messages = [systemMsg, ...historyMessages, userMsg];
+    const messages = [systemMsg, userIdMsg, ...historyMessages, userMsg];
 
     // Run the graph
     const result = await app.invoke({ messages});
