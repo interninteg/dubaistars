@@ -102,6 +102,12 @@ const createBooking = tool(async (input) => {
 // Add to your tools array and ToolNode
 const tools = [createBooking];
 const toolNodeForGraph = new ToolNode(tools);
+const toolNodeWithDebug = async (state: typeof MessagesAnnotation.State) => {
+  console.log('[DEBUG] ToolNode reached with state:', state);
+  const result = await toolNodeForGraph.invoke(state);
+  console.log('[DEBUG] ToolNode output:', result);
+  return result;
+};
 
 const modelWithTools = new ChatOpenAI({
   openAIApiKey: process.env.OPENAI_API_KEY,
@@ -129,7 +135,7 @@ const callModel = async (state: typeof MessagesAnnotation.State) => {
 
 const workflow = new StateGraph(MessagesAnnotation)
   .addNode("agent", callModel)
-  .addNode("tools", toolNodeForGraph)
+  .addNode("tools", toolNodeWithDebug)
   .addEdge(START, "agent")
   .addConditionalEdges("agent", shouldContinue, ["tools", END])
   .addEdge("tools", "agent");
