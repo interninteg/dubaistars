@@ -60,6 +60,7 @@
     "memorystore": "^1.6.7",
     "@langchain/langgraph": "^0.2.67",
     "@langchain/openai": "^0.5.10",
+    "@langchain/core": "0.3.55",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "pg": "^8.14.1",
