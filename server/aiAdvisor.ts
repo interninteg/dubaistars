@@ -52,7 +52,7 @@ const createBookingSchema = z.object({
 });
 
 // Tool for creating a booking
-const createBookingTool = tool(async (input) => {
+const createBooking = tool(async (input) => {
   console.log('used the tool')
   const { userId, ...bookingDetails } = input;
 
@@ -85,13 +85,11 @@ const createBookingTool = tool(async (input) => {
     returnDate: bookingDetails.returnDate ? new Date(bookingDetails.returnDate) : null, // Convert to Date or null
   });
 
-  console.log("Payload:", payload);
 
 
   // Use storage.createBooking() directly
   const booking = await storage.createBooking(payload);
 
-  console.log("Result:", booking);
 
   const formattedDate = payload.departureDate.toISOString().split("T")[0];
   return `Booking created! ID: ${booking.id}, Destination: ${booking.destination}, Departure: ${formattedDate}`;
@@ -104,7 +102,7 @@ const createBookingTool = tool(async (input) => {
 });
 
 // Add to your tools array and ToolNode
-const tools = [createBookingTool];
+const tools = [createBooking];
 const toolNodeForGraph = new ToolNode(tools);
 
 const modelWithTools = new ChatOpenAI({
@@ -117,8 +115,8 @@ const modelWithTools = new ChatOpenAI({
 const shouldContinue = (state: typeof MessagesAnnotation.State) => {
   const { messages } = state;
   const lastMessage = messages[messages.length - 1];
-  console.log("Last message in shouldContinue:", lastMessage);
   if ("tool_calls" in lastMessage && Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls.length) {
+    console.log('the tool was invoked');
     return "tools";
   }
   return END;
@@ -127,7 +125,6 @@ const shouldContinue = (state: typeof MessagesAnnotation.State) => {
 const callModel = async (state: typeof MessagesAnnotation.State) => {
   const { messages } = state;
   const response = await modelWithTools.invoke(messages);
-  console.log("Model response:", response);
   return { messages: response };
 };
 
