@@ -12,6 +12,7 @@ import {
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { tool } from '@langchain/core/tools';
 import { z } from "zod";
+import {isAIMessage } from "@langchain/core/messages";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,7 @@ try {
 
 // Update the schema for booking creation
 const createBookingSchema = z.object({
+  userId: z.string().describe("User ID of the person making the booking"),
   destination: z.enum(["mercury", "venus", "earth", "mars", "saturn"]).describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
   departureDate: z.date().describe("Departure date in ISO format (YYYY-MM-DD)"),
   returnDate: z.date().nullable().describe("Return date in ISO format (YYYY-MM-DD) or null if not applicable"), // Allow null
@@ -76,9 +78,7 @@ const createBooking = tool(async (input) => {
   const price = basePrice * multiplier * Number(bookingDetails.numberOfTravelers);
 
   // Build payload with userId
-  const payload = createBookingSchema.extend({
-    userId: z.string().describe("User ID of the person making the booking"),
-  }).parse({
+  const payload = createBookingSchema.parse({
     ...bookingDetails,
     userId, // Include userId in the payload
     price,
@@ -96,9 +96,7 @@ const createBooking = tool(async (input) => {
 }, {
   name: "create_booking",
   description: "Create a new travel booking for a user.",
-  schema: createBookingSchema.extend({
-    userId: z.string().describe("User ID of the person making the booking"),
-  }),
+  schema: createBookingSchema,
 });
 
 // Add to your tools array and ToolNode
@@ -115,7 +113,7 @@ const modelWithTools = new ChatOpenAI({
 const shouldContinue = (state: typeof MessagesAnnotation.State) => {
   const { messages } = state;
   const lastMessage = messages[messages.length - 1];
-  if ("tool_calls" in lastMessage && Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls.length) {
+  if ("tool_calls" in lastMessage && Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls.length && isAIMessage(lastMessage)) {
     console.log('the tool was invoked');
     return "tools";
   }
@@ -153,7 +151,7 @@ export async function generateAIResponse(userId: string, userMessage: string): P
     const messages = [systemMsg, userIdMsg, ...historyMessages, userMsg];
 
     // Run the graph
-    const result = await app.invoke({ messages});
+    const result = await app.invoke({ messages}, {recursionLimit: 2});
     const aiResponse = result.messages[result.messages.length - 1]?.content ||
       "I apologize, but I couldn't generate a response. Please try again.";
 
