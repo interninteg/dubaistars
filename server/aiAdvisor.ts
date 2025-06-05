@@ -94,7 +94,7 @@ const createBooking = tool(async (input) => {
   const formattedDate = payload.departureDate.toISOString().split("T")[0];
   return `Booking created! ID: ${booking.id}, Destination: ${booking.destination}, Departure: ${formattedDate}`;
 }, {
-  name: "create_booking",
+  name: "createBooking",
   description: "Create a new travel booking for a user.",
   schema: createBookingSchema,
 });
