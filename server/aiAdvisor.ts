@@ -84,9 +84,13 @@ const createBookingTool = tool(async (input) => {
     returnDate: bookingDetails.returnDate ? new Date(bookingDetails.returnDate) : null, // Convert to Date or null
   });
 
+  console.log("Payload:", payload);
+
 
   // Use storage.createBooking() directly
   const booking = await storage.createBooking(payload);
+
+  console.log("Result:", booking);
 
   const formattedDate = payload.departureDate.toISOString().split("T")[0];
   return `Booking created! ID: ${booking.id}, Destination: ${booking.destination}, Departure: ${formattedDate}`;
