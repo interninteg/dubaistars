@@ -53,6 +53,7 @@ const createBookingSchema = z.object({
 
 // Tool for creating a booking
 const createBookingTool = tool(async (input) => {
+  console.log('used the tool')
   const { userId, ...bookingDetails } = input;
 
   // Calculate price based on destination and travel class
