@@ -115,6 +115,7 @@ const shouldContinue = (state: typeof MessagesAnnotation.State) => {
   const lastMessage = messages[messages.length - 1];
   if ("tool_calls" in lastMessage && Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls.length && isAIMessage(lastMessage)) {
     console.log('the tool was invoked');
+    console.log('test:', lastMessage.getType(), lastMessage.tool_calls)
     return "tools";
   }
   return END;
