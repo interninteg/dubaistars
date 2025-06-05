@@ -133,11 +133,11 @@ const workflow = new StateGraph(MessagesAnnotation)
 
 const app = workflow.compile();
 
-// --- Your generateAIResponse function remains the same ---
+//used by /api/chat route to generate response for user
 export async function generateAIResponse(userId: string, userMessage: string): Promise<string> {
   try {
     const chatHistory = await storage.getChatMessages(userId);
-    const userIdMsg = { role: "system", content: `User ID: ${userId}` };
+    const userIdMsg = { role: "system", content: `use this userID to create booking: ${userId}` };
     const systemMsg = { role: "system", content: systemMessage };
     const historyMessages = chatHistory.map(msg => {
       if (msg.role === "user" || msg.role === "assistant" || msg.role === "system") {
