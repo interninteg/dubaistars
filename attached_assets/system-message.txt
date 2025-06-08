@@ -43,17 +43,17 @@
    - Activities: Ice mining, ring walking, zero-G dancing, outer moon exploration
 
 **Travel Class Options:**
-1. **Economy Shuttle**
+1. **Economy**
    - Price multiplier: 1x base fare
    - Features: Shared quarters, basic amenities, standard food options
    - Suitable for: Budget-conscious travelers, groups, students
 
-2. **Luxury Cabin**
+2. **Luxury**
    - Price multiplier: 1.5x base fare
    - Features: Private suite, premium dining, enhanced entertainment, personalized service
    - Suitable for: Comfort seekers, couples, business travelers
 
-3. **VIP Zero-Gravity**
+3. **VIP**
    - Price multiplier: 2.5x base fare
    - Features: Exclusive access, dedicated staff, gourmet dining, unlimited spacewalk opportunities
    - Suitable for: Celebrities, executives, luxury travelers, special occasions
