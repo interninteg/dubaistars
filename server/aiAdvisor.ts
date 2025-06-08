@@ -157,7 +157,7 @@ export async function generateAIResponse(userId: string, userMessage: string): P
     const messages = [systemMsg, userIdMsg, ...historyMessages, userMsg];
 
     // Run the graph
-    const result = await app.invoke({ messages}, {recursionLimit: 2});
+    const result = await app.invoke({ messages}, {recursionLimit: 3});
     const aiResponse = result.messages[result.messages.length - 1]?.content ||
       "I apologize, but I couldn't generate a response. Please try again.";
 
