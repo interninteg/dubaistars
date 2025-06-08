@@ -55,7 +55,6 @@ const createBookingSchema = z.object({
 
 // Tool for creating a booking
 const createBooking = tool(async (input) => {
-  console.log('used the tool')
   const { userId, ...bookingDetails } = input;
 
   // Calculate price based on destination and travel class
@@ -119,8 +118,6 @@ const shouldContinue = (state: typeof MessagesAnnotation.State) => {
   const { messages } = state;
   const lastMessage = messages[messages.length - 1];
   if ("tool_calls" in lastMessage && Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls.length && isAIMessage(lastMessage)) {
-    console.log('the tool was invoked');
-    console.log('test:', lastMessage.getType(), lastMessage.tool_calls)
     return "tools";
   }
   return END;
@@ -157,7 +154,7 @@ export async function generateAIResponse(userId: string, userMessage: string): P
     const messages = [systemMsg, userIdMsg, ...historyMessages, userMsg];
 
     // Run the graph
-    const result = await app.invoke({ messages}, {recursionLimit: 3});
+    const result = await app.invoke({ messages}, {recursionLimit: 5});
     const aiResponse = result.messages[result.messages.length - 1]?.content ||
       "I apologize, but I couldn't generate a response. Please try again.";
 
