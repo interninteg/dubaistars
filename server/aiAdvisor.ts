@@ -46,8 +46,8 @@ try {
 const createBookingSchema = z.object({
   userId: z.string().describe("User ID of the person making the booking"),
   destination: z.enum(["mercury", "venus", "earth", "mars", "saturn"]).describe("Destination for the booking (e.g., Mars, Saturn Rings Tour)"),
-  departureDate: z.date().describe("Departure date in ISO format (YYYY-MM-DD)"),
-  returnDate: z.date().nullable().describe("Return date in ISO format (YYYY-MM-DD) or null if not applicable"), // Allow null
+  departureDate: z.coerce.date().describe("Departure date in ISO format (YYYY-MM-DD)"),
+  returnDate: z.coerce.date().nullable().describe("Return date in ISO format (YYYY-MM-DD) or null if not applicable"), // Allow null
   travelClass: z.enum(["economy", "luxury", "vip"]).describe("Travel class (e.g., Luxury, Economy, VIP)"),
   numberOfTravelers: z.coerce.number().min(1, "At least 1 traveler is required").max(10, "Maximum 10 travelers allowed").describe("Number of travelers"),
   price: z.number().describe("Total price for the booking"),
