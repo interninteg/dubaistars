@@ -103,7 +103,6 @@ const createBooking = tool(async (input) => {
 const tools = [createBooking];
 const toolNodeForGraph = new ToolNode(tools);
 const toolNodeWithDebug = async (state: typeof MessagesAnnotation.State) => {
-  console.log('[DEBUG] ToolNode reached with state:', state);
   const result = await toolNodeForGraph.invoke(state);
   console.log('[DEBUG] ToolNode output:', result);
   return result;
