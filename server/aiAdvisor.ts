@@ -112,7 +112,7 @@ const toolNodeWithDebug = async (state: typeof MessagesAnnotation.State) => {
 const modelWithTools = new ChatOpenAI({
   openAIApiKey: process.env.OPENAI_API_KEY,
   modelName: OPENAI_MODEL,
-  temperature: 0,
+  temperature: 0.7,
   maxTokens: 1500,
 }).bindTools(tools);;
 
